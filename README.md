@@ -191,6 +191,4 @@ For issues, questions, or suggestions:
 - Interactive extent selection
 - Automatic base generation with fallback methods
 
----
 
-**Made with ?? for the GIS and 3D Printing communities**
