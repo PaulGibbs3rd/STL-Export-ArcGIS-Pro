@@ -166,7 +166,7 @@ Contributions are welcome! Please:
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License 
 
 ## Acknowledgments
 
@@ -181,7 +181,7 @@ For issues, questions, or suggestions:
 
 ## Author
 
-**Paul** ([@pau11750](https://github.com/pau11750))
+**Paul** ([@PaulGibbs3rd](https://github.com/PaulGibbs3rd))
 
 ## Version History
 
