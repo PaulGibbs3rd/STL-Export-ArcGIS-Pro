@@ -1,0 +1,54 @@
+﻿<ArcGIS defaultAssembly="STL Export Tool.dll" defaultNamespace="STL_Export_Tool" xmlns="http://schemas.esri.com/DADF/Registry" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://schemas.esri.com/DADF/Registry file:///C:/Program%20Files/ArcGIS/Pro/bin/ArcGIS.Desktop.Framework.xsd">
+  <AddInInfo id="{d6ebc98b-ad56-445a-98ea-2e69f1c0213d}" version="1.0" desktopVersion="3.5.57366" product="ArcGISPro">
+    <Name>STL_Export_Tool</Name>
+    <Description>STL_Export_Tool description</Description>
+    <Image>Images\AddinDesktop32.png</Image>
+    <Author>pau11750</Author>
+    <Company>ESRI</Company>
+    <Date>8/19/2025 2:46:21 PM</Date>
+    <Subject>Framework</Subject>
+    <!-- Note subject can be one or more of these topics:
+                    Content, Framework, Editing, Geodatabase, Geometry, Geoprocessing, Layouts, Map Authoring, Map Exploration -->
+  </AddInInfo>
+  <modules>
+    <insertModule id="STL_Export_Tool_Module" className="Module1" autoLoad="false" caption="Module1">
+      <!-- Custom tab for STL Export Tool -->
+      <tabs>
+        <tab id="STL_Export_Tool_Tab1" caption="STL Export">
+          <group refID="STL_Export_Tool_Group1"/>
+        </tab>
+      </tabs>
+      <groups>
+        <!-- Moved group to custom tab (appearsOnAddInTab set to false) -->
+        <group id="STL_Export_Tool_Group1" caption="STL Export Tools" appearsOnAddInTab="false">
+          <!-- host controls within groups -->
+          <button refID="STL_Export_Tool_displayDockpane" size="large" />
+        </group>
+      </groups>
+      <controls>
+        <!-- add your controls here -->
+        <button id="STL_Export_Tool_displayDockpane" caption="STL Export Dockpane" className="displayDockpane" loadOnClick="true" smallImage="GenericButtonBlue16" largeImage="GenericButtonBlue32">
+          <tooltip heading="STL Export Dockpane">
+            STL Export Dockpane<disabledText /></tooltip>
+        </button>
+        <tool id="STL_Export_Tool_DrawExtentTool"
+      caption="Draw Extent"
+      className="DrawExtentTool"
+      loadOnClick="true"
+      smallImage="GenericMapSelection16"
+      largeImage="GenericMapSelection32">
+          <tooltip heading="Draw STL Export Extent">
+            Drag a rectangle on the map/scene to populate the export extent.
+            <disabledText />
+          </tooltip>
+        </tool>
+
+      </controls>
+      <dockPanes>
+        <dockPane id="STL_Export_Tool_Dockpane1" caption="STL Export Tool" className="Dockpane1ViewModel" dock="group" dockWith="esri_core_projectDockPane">
+          <content className="Dockpane1View" />
+        </dockPane>
+      </dockPanes>
+    </insertModule>
+  </modules>
+</ArcGIS>
