@@ -1,0 +1,23 @@
+# Visual Studio / ArcGIS Pro
+.vs/
+bin/
+obj/
+*.user
+*.suo
+*.cache
+*.log
+
+# ArcGIS Pro artifacts
+*.esriaddin
+*.esriaddinzip
+*.aprx
+*.gdb/
+*.lock
+
+# Build outputs
+Debug/
+Release/
+
+# OS junk
+.DS_Store
+Thumbs.db
