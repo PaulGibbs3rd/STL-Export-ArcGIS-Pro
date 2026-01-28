@@ -147,6 +147,10 @@ Custom map tool for interactive extent selection
 **Solution**: The tool will automatically try the fallback method. Check that:
 - The mesh has valid geometry
 - The base thickness is appropriate for your scene units
+- That the full map extent is populated, the base 'walks' the edges to create the base and if say for example on city data is present with no elevation surface the base will fail
+- If the STL doesn't appear right, try adding Esri's elevation surface to fill in any gaps. 
+
+
 
 ### Export produces empty file
 **Solution**: Verify that:
