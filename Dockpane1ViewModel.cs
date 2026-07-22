@@ -30,6 +30,13 @@ namespace STL_Export_Tool
         /// </summary>
         private const string _dockPaneID = "STL_Export_Tool_Dockpane1";
 
+        /// <summary>
+        /// Conversion factor from feet to meters, used to convert the user-entered
+        /// BaseThickness (feet) into the mesh's native real-world units (meters), which
+        /// the STL exporter treats 1:1 as millimeters.
+        /// </summary>
+        private const double FeetToMeters = 0.3048;
+
         // UI Display Properties
         private string _heading = "STL Export";
         private string _status = "Ready";
@@ -44,7 +51,7 @@ namespace STL_Export_Tool
 
         // Base Generation Options
         private bool _addBase = true;
-        private double _baseThickness = 5.0; // meters (for Local Scene)
+        private double _baseThickness = 5.0; // feet, added below the mesh's lowest point
 
         #endregion
 
@@ -330,12 +337,87 @@ namespace STL_Export_Tool
                 if (!ready)
                     throw new IOException($"Export did not produce a readable STL at: {fullPath}");
 
+                // Diagnostic: report what ArcGIS Pro's exporter actually wrote to disk,
+                // independent of the requested extent or base settings. This is the ground
+                // truth for whether the exported layer(s) produced real geometry.
+                var meshBounds = await Task.Run(() => STL_Basifier.GetMeshBounds(fullPath));
+                double meshWidth = meshBounds.maxX - meshBounds.minX;
+                double meshDepth = meshBounds.maxY - meshBounds.minY;
+                double meshHeight = meshBounds.maxZ - meshBounds.minZ;
+                System.Diagnostics.Debug.WriteLine(
+                    $"[STL Export] Raw exported mesh: {meshBounds.triangleCount} triangles, " +
+                    $"size {meshWidth:0.######} x {meshDepth:0.######} x {meshHeight:0.######} (native units).");
+
+                // Detect the case where ArcGIS Pro wrote the mesh's vertex positions using the
+                // scene's raw geographic (decimal degree) coordinates instead of projecting to
+                // real-world linear units. This shows up as the mesh's raw X/Y footprint closely
+                // matching the requested extent's degree deltas (e.g. ~0.0055 "units" instead of
+                // ~500 meters). When detected, rescale the mesh into real meters using the known
+                // geodesic size of the requested extent.
+                double extentDegX = MaxX - MinX;
+                double extentDegY = MaxY - MinY;
+                bool looksLikeRawDegrees = meshBounds.triangleCount > 0 && extentDegX > 0 && extentDegY > 0
+                    && Math.Abs(meshWidth - extentDegX) < extentDegX * 0.5
+                    && Math.Abs(meshDepth - extentDegY) < extentDegY * 0.5;
+
+                if (looksLikeRawDegrees)
+                {
+                    double realWidthMeters = HaversineMeters(MinX, MinY, MaxX, MinY);
+                    double realDepthMeters = HaversineMeters(MinX, MinY, MinX, MaxY);
+
+                    double scaleX = meshWidth > 0 ? realWidthMeters / meshWidth : 1.0;
+                    double scaleY = meshDepth > 0 ? realDepthMeters / meshDepth : 1.0;
+                    // Apply the same horizontal scale to Z since vertical exaggeration in this
+                    // scenario is unknown, but keeping X/Y/Z proportional avoids a flattened or
+                    // needle-shaped model. Using the average of the two horizontal scales keeps
+                    // the correction isotropic.
+                    double scaleZ = (scaleX + scaleY) / 2.0;
+
+                    string rescaledPath = fullPath + ".rescaled";
+                    await Task.Run(() => STL_Basifier.RescaleMesh(fullPath, rescaledPath, scaleX, scaleY, scaleZ));
+                    File.Copy(rescaledPath, fullPath, overwrite: true);
+                    File.Delete(rescaledPath);
+
+                    // Recompute bounds after correction for accurate diagnostics/status.
+                    meshBounds = await Task.Run(() => STL_Basifier.GetMeshBounds(fullPath));
+                    meshWidth = meshBounds.maxX - meshBounds.minX;
+                    meshDepth = meshBounds.maxY - meshBounds.minY;
+                    meshHeight = meshBounds.maxZ - meshBounds.minZ;
+                    System.Diagnostics.Debug.WriteLine(
+                        $"[STL Export] Detected raw-degree export; rescaled by ({scaleX:0.##}, {scaleY:0.##}, {scaleZ:0.##}). " +
+                        $"New size {meshWidth:0.###} x {meshDepth:0.###} x {meshHeight:0.###} (mm).");
+                    Status = $"Corrected raw-degree export scale (x{scaleX:0.##}).";
+                }
+
+                if (meshBounds.triangleCount == 0 || (meshWidth < 0.01 && meshDepth < 0.01))
+                {
+                    var proceed = MessageBox.Show(
+                        $"ArcGIS Pro's exporter wrote {meshBounds.triangleCount} triangles with a raw size of " +
+                        $"{meshWidth:0.######} x {meshDepth:0.######} x {meshHeight:0.######} (native units) for the " +
+                        $"requested extent. This is independent of the extent you drew - it reflects what the " +
+                        $"exportable layers (e.g. the 3D Tiles/integrated mesh layer) actually produced. " +
+                        $"This usually means that layer isn't exporting real geometry via ExportScene3DObjects. " +
+                        "Continue anyway?",
+                        "STL Export - Diagnostic", System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Warning);
+                    if (proceed != System.Windows.MessageBoxResult.Yes)
+                    {
+                        Status = "Export cancelled: exported mesh is empty/degenerate.";
+                        return;
+                    }
+                }
+
                 #endregion
 
                 #region Add 3D Printable Base (Optional)
 
                 if (AddBase && BaseThickness > 0)
                 {
+                    // BaseThickness is entered in feet; the exported mesh's native units match
+                    // the scene's real-world linear units (meters), which the STL writer treats
+                    // 1:1 as millimeters. Convert feet -> meters so the base is added in the same
+                    // units as the mesh before extruding below its lowest point.
+                    float thicknessInMeters = (float)(BaseThickness * FeetToMeters);
+
                     // Use temporary files to avoid corrupting the original during processing
                     string backupPath = fullPath + ".bak";
                     string tempOut = fullPath + ".tmp";
@@ -343,11 +425,24 @@ namespace STL_Export_Tool
                     // Try primary method: Extruded base (connects walls directly to mesh boundary)
                     string reason = string.Empty;
                     bool ok = await Task.Run(() =>
-                        STL_Basifier.TryAddExtrudedBase(fullPath, tempOut, (float)BaseThickness, padding: 0f, out reason)
+                        STL_Basifier.TryAddExtrudedBase(fullPath, tempOut, thicknessInMeters, padding: 0f, out reason)
                     );
 
                     if (!ok)
                     {
+                        // If the mesh footprint is disproportionately smaller than the requested
+                        // base thickness, the export extent is almost certainly degenerate.
+                        // Falling back to a rectangular base would just produce the same
+                        // out-of-proportion result, so surface the issue instead of masking it.
+                        if (reason.Contains("far smaller than the requested base", StringComparison.OrdinalIgnoreCase))
+                        {
+                            Status = "Export failed: extent too small relative to base thickness.";
+                            MessageBox.Show(
+                                $"{reason}\n\nThe unbased export at {fullPath} was kept; no base was added.",
+                                "STL Export", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                            return;
+                        }
+
                         // Fallback method: Simple rectangular base
                         MessageBox.Show($"Extruded base failed: {reason}\nTrying fallback method...",
                             "STL Export", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
@@ -355,7 +450,7 @@ namespace STL_Export_Tool
                         await Task.Run(() =>
                             STL_Basifier.AddRectangularBaseAuto(
                                 fullPath, tempOut,
-                                (float)BaseThickness, outset: 0f, raise: 0.001f)
+                                thicknessInMeters, outset: 0f, raise: 0.001f)
                         );
                         ok = true;
                         reason = "Used rectangular base as fallback";
@@ -447,6 +542,26 @@ namespace STL_Export_Tool
             return File.Exists(path);
         }
 
+        /// <summary>
+        /// Computes the geodesic (great-circle) distance in meters between two lat/lon points
+        /// using the haversine formula. Used to convert a drawn extent's decimal-degree size
+        /// into a real-world linear measurement so exported meshes in raw degrees can be rescaled.
+        /// </summary>
+        private static double HaversineMeters(double lon1, double lat1, double lon2, double lat2)
+        {
+            const double earthRadiusMeters = 6371000.0;
+            double dLat = (lat2 - lat1) * Math.PI / 180.0;
+            double dLon = (lon2 - lon1) * Math.PI / 180.0;
+            double lat1Rad = lat1 * Math.PI / 180.0;
+            double lat2Rad = lat2 * Math.PI / 180.0;
+
+            double a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
+                       Math.Cos(lat1Rad) * Math.Cos(lat2Rad) *
+                       Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
+            double c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
+            return earthRadiusMeters * c;
+        }
+
         #endregion
 
         #region Dockpane Management
@@ -457,7 +572,14 @@ namespace STL_Export_Tool
         internal static void Show()
         {
             var pane = FrameworkApplication.DockPaneManager.Find(_dockPaneID);
-            pane?.Activate();
+            if (pane == null)
+            {
+                ArcGIS.Desktop.Framework.Dialogs.MessageBox.Show(
+                    $"DockPane '{_dockPaneID}' was not found by the DockPaneManager. Check that the id in Config.daml matches exactly.",
+                    "STL Export Tool - Diagnostic");
+                return;
+            }
+            pane.Activate();
         }
 
         #endregion

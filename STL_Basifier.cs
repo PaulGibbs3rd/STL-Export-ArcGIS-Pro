@@ -18,6 +18,54 @@ namespace STL_Export_Tool
         struct TriIdx { public int A, B, C; public TriIdx(int a, int b, int c) { A = a; B = b; C = c; } }
 
         /// <summary>
+        /// Rescales all vertex coordinates of an STL file by a uniform factor. Used to correct
+        /// meshes that were exported in degenerate/wrong units (e.g. raw decimal degrees instead
+        /// of real-world linear units) into proper real-world meters.
+        /// </summary>
+        public static void RescaleMesh(string inPath, string outPath, double scaleX, double scaleY, double scaleZ)
+        {
+            List<V3> verts; List<TriIdx> tris;
+            ReadSTL(inPath, out verts, out tris);
+
+            for (int i = 0; i < verts.Count; i++)
+            {
+                var v = verts[i];
+                verts[i] = new V3((float)(v.X * scaleX), (float)(v.Y * scaleY), (float)(v.Z * scaleZ));
+            }
+
+            WriteBinarySTL(outPath, verts, tris);
+        }
+
+        /// <summary>
+        /// Reads an STL file and reports its raw vertex bounding box and triangle count,
+        /// without modifying it. Useful for diagnosing whether the exporter that produced
+        /// the file actually wrote meaningful real-world geometry.
+        /// </summary>
+        public static (int triangleCount, float minX, float minY, float minZ, float maxX, float maxY, float maxZ) GetMeshBounds(string path)
+        {
+            List<V3> verts; List<TriIdx> tris;
+            ReadSTL(path, out verts, out tris);
+
+            float minX = float.MaxValue, minY = float.MaxValue, minZ = float.MaxValue;
+            float maxX = float.MinValue, maxY = float.MinValue, maxZ = float.MinValue;
+
+            foreach (var v in verts)
+            {
+                if (v.X < minX) minX = v.X;
+                if (v.Y < minY) minY = v.Y;
+                if (v.Z < minZ) minZ = v.Z;
+                if (v.X > maxX) maxX = v.X;
+                if (v.Y > maxY) maxY = v.Y;
+                if (v.Z > maxZ) maxZ = v.Z;
+            }
+
+            if (verts.Count == 0)
+                minX = minY = minZ = maxX = maxY = maxZ = 0f;
+
+            return (tris.Count, minX, minY, minZ, maxX, maxY, maxZ);
+        }
+
+        /// <summary>
         /// Creates a watertight solid by connecting 4 walls directly to the mesh boundary edges.
         /// The mesh surface IS the top - no separate top face is added.
         /// Walls drop straight down from the mesh perimeter to create a solid base.
@@ -53,6 +101,20 @@ namespace STL_Export_Tool
             minY -= padding;
             maxX += padding;
             maxY += padding;
+
+            // Sanity check: if the mesh footprint is far smaller than the requested base
+            // thickness, the source mesh is almost certainly degenerate (e.g. an accidental
+            // tiny/zero-size export extent) rather than the thickness genuinely being wrong.
+            float footprintX = maxX - minX;
+            float footprintY = maxY - minY;
+            float maxFootprint = Math.Max(footprintX, footprintY);
+            if (maxFootprint <= 0f || thickness > maxFootprint * 50f)
+            {
+                throw new InvalidOperationException(
+                    $"Mesh footprint ({maxFootprint:0.######} units) is far smaller than the requested base " +
+                    $"thickness ({thickness} units). This usually means the export extent was too small " +
+                    "(e.g. a tiny/degenerate rectangle was drawn on the map). Re-draw a larger extent and export again.");
+            }
 
             // Base level
             float baseZ = minZ - thickness;

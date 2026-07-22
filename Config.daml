@@ -1,5 +1,5 @@
 ﻿<ArcGIS defaultAssembly="STL Export Tool.dll" defaultNamespace="STL_Export_Tool" xmlns="http://schemas.esri.com/DADF/Registry" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://schemas.esri.com/DADF/Registry file:///C:/Program%20Files/ArcGIS/Pro/bin/ArcGIS.Desktop.Framework.xsd">
-  <AddInInfo id="{d6ebc98b-ad56-445a-98ea-2e69f1c0213d}" version="1.0" desktopVersion="3.5.57366" product="ArcGISPro">
+  <AddInInfo id="{d6ebc98b-ad56-445a-98ea-2e69f1c0213d}" version="1.0" desktopVersion="3.7.0.1901" product="ArcGISPro">
     <Name>STL_Export_Tool</Name>
     <Description>STL_Export_Tool description</Description>
     <Image>Images\AddinDesktop32.png</Image>

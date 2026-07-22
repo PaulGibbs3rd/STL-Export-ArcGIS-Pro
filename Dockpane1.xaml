@@ -121,7 +121,7 @@
                       IsChecked="{Binding AddBase}"
                       Margin="0,0,0,8"/>
                         <TextBlock Grid.Row="1" Grid.Column="0"
-                       Text="Base thickness:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                       Text="Base thickness (ft):" VerticalAlignment="Center" Margin="0,0,8,0"/>
                         <TextBox  Grid.Row="1" Grid.Column="1"
                       Text="{Binding BaseThickness, UpdateSourceTrigger=PropertyChanged}"
                       IsEnabled="{Binding AddBase}"/>
