@@ -23,6 +23,7 @@
         <group id="STL_Export_Tool_Group1" caption="STL Export Tools" appearsOnAddInTab="false">
           <!-- host controls within groups -->
           <button refID="STL_Export_Tool_displayDockpane" size="large" />
+          <button refID="STL_Export_Tool_displayAddBaseDockpane" size="large" />
         </group>
       </groups>
       <controls>
@@ -30,6 +31,10 @@
         <button id="STL_Export_Tool_displayDockpane" caption="STL Export Dockpane" className="displayDockpane" loadOnClick="true" smallImage="GenericButtonBlue16" largeImage="GenericButtonBlue32">
           <tooltip heading="STL Export Dockpane">
             STL Export Dockpane<disabledText /></tooltip>
+        </button>
+        <button id="STL_Export_Tool_displayAddBaseDockpane" caption="Add Base to STL" className="displayAddBaseDockpane" loadOnClick="true" smallImage="GenericButtonBlue16" largeImage="GenericButtonBlue32">
+          <tooltip heading="Add Base to STL">
+            Add a watertight flat base to an existing open-mesh STL file.<disabledText /></tooltip>
         </button>
         <tool id="STL_Export_Tool_DrawExtentTool"
       caption="Draw Extent"
@@ -47,6 +52,9 @@
       <dockPanes>
         <dockPane id="STL_Export_Tool_Dockpane1" caption="STL Export Tool" className="Dockpane1ViewModel" dock="group" dockWith="esri_core_projectDockPane">
           <content className="Dockpane1View" />
+        </dockPane>
+        <dockPane id="STL_Export_Tool_Dockpane2" caption="Add Base to STL" className="Dockpane2ViewModel" dock="group" dockWith="esri_core_projectDockPane">
+          <content className="Dockpane2View" />
         </dockPane>
       </dockPanes>
     </insertModule>

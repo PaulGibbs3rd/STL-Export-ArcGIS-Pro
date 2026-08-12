@@ -46,6 +46,30 @@ An ArcGIS Pro add-in that exports 3D scene content to STL format with automatic 
 
 6. Double-click the `.esriAddinX` file to install in ArcGIS Pro
 
+## Known Limitations / Planned Enhancements
+
+- **Rotated extents are still exported as a north-aligned bounding box.** ArcGIS Pro's
+  `ExportScene3DObjects` / `STLExportSceneContentsFormat.Extent` API only accepts an
+  axis-aligned `Envelope`, so any export request - no matter how the extent was drawn -
+  physically generates mesh geometry only within a north/south-aligned rectangular
+  region. The current "Draw Extent on Map" tool works around this by:
+  1. Reading the true rotated rectangle corners from the sketch (via a minimum-area
+     bounding rectangle over the drawn points).
+  2. Exporting the north-aligned bounding envelope that fully contains the rotated
+     rectangle (since that's all the export API will accept).
+  3. Cropping/de-rotating the resulting mesh down to the exact rotated footprint
+     (`STL_Basifier.CropAndDeRotateMesh`) as a post-process "boolean cut" step.
+
+  This produces a correctly rotated final STL, but requires exporting a larger
+  north-aligned area first and is bounded by whatever ArcGIS Pro's exporter is able to
+  generate for that larger box.
+
+  **Enhancement idea:** Investigate accepting/exporting an arbitrary 3D volume (e.g. a
+  rotated prism or user-defined polygon footprint with a height range) instead of only a
+  2D axis-aligned extent, if/when ArcGIS Pro exposes an export API that isn't limited to
+  an `Envelope`. Until then, rotated/oriented exports rely on the export-then-crop
+  workaround described above.
+
 ## Usage
 
 ### Opening the Tool

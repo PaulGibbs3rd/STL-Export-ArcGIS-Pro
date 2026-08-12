@@ -8,7 +8,8 @@ using ArcGIS.Desktop.Mapping;
 namespace STL_Export_Tool
 {
     /// <summary>
-    /// Click–drag a rectangle on the map/scene; writes the envelope to the dockpane.
+    /// Click–drag a rectangle on the map/scene; writes the axis-aligned envelope to the
+    /// dockpane's MinX/MinY/MaxX/MaxY fields.
     /// </summary>
     internal class DrawExtentTool : MapTool
     {
@@ -27,12 +28,11 @@ namespace STL_Export_Tool
                 if (geometry == null || geometry.IsEmpty)
                     return Task.FromResult(false);
 
-                // Rectangle sketch returns a Polygon; its Extent is the envelope we want.
-                var env = geometry as Envelope ?? geometry.Extent;
+                var env = geometry.Extent;
                 if (env == null || env.IsEmpty)
                     return Task.FromResult(false);
 
-                // Update the dockpane’s fields on the UI thread
+                // Update the dockpane's fields on the UI thread
                 Application.Current.Dispatcher.Invoke(() =>
                 {
                     var pane = FrameworkApplication.DockPaneManager.Find("STL_Export_Tool_Dockpane1") as Dockpane1ViewModel;

@@ -72,8 +72,8 @@
                         <TextBlock Grid.Row="3" Grid.Column="0" Text="MaxX:" VerticalAlignment="Center" Margin="0,0,8,4"/>
                         <TextBox  Grid.Row="3" Grid.Column="1" Text="{Binding MaxX, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,8,4"/>
 
-                        <TextBlock Grid.Row="4" Grid.Column="0" Text="MaxY:" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                        <TextBox  Grid.Row="4" Grid.Column="1" Text="{Binding MaxY, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBlock Grid.Row="4" Grid.Column="0" Text="MaxY:" VerticalAlignment="Center" Margin="0,0,8,4"/>
+                        <TextBox  Grid.Row="4" Grid.Column="1" Text="{Binding MaxY, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,8,4"/>
                     </Grid>
                 </GroupBox>
 

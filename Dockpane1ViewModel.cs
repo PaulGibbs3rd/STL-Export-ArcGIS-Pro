@@ -356,7 +356,20 @@ namespace STL_Export_Tool
                 // geodesic size of the requested extent.
                 double extentDegX = MaxX - MinX;
                 double extentDegY = MaxY - MinY;
-                bool looksLikeRawDegrees = meshBounds.triangleCount > 0 && extentDegX > 0 && extentDegY > 0
+
+                // Guard against false positives: only treat the extent as decimal-degree
+                // geographic coordinates if all four values actually fall within valid
+                // lon/lat ranges. Projected coordinate systems (e.g. Web Mercator, State
+                // Plane, UTM) commonly use values in the thousands/millions, which would
+                // otherwise be misidentified and fed into the haversine calculation,
+                // producing wildly wrong/non-uniform scale factors and a distorted mesh.
+                bool extentLooksGeographic =
+                    Math.Abs(MinX) <= 180 && Math.Abs(MaxX) <= 180 &&
+                    Math.Abs(MinY) <= 90 && Math.Abs(MaxY) <= 90 &&
+                    extentDegX > 0 && extentDegX < 10 &&
+                    extentDegY > 0 && extentDegY < 10;
+
+                bool looksLikeRawDegrees = extentLooksGeographic && meshBounds.triangleCount > 0
                     && Math.Abs(meshWidth - extentDegX) < extentDegX * 0.5
                     && Math.Abs(meshDepth - extentDegY) < extentDegY * 0.5;
 
